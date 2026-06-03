@@ -243,6 +243,23 @@
     }
     .btn-del:hover { color: #de350b; background: #ffebe6; }
 
+    /* Initials avatar */
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      letter-spacing: 0;
+      user-select: none;
+    }
+    .avatar.empty { background: #dfe1e6; color: #97a0af; }
+
     /* Details row */
     .task-details {
       padding: 0 10px 7px 34px; /* align under description */
@@ -375,6 +392,11 @@
           maxlength="200" />
       </div>
       <div class="field-group">
+        <label for="inp-initials">Your Initials</label>
+        <input type="text" id="inp-initials" placeholder="e.g. MT" maxlength="4"
+          style="width:62px;text-transform:uppercase;" />
+      </div>
+      <div class="field-group">
         <label for="inp-hours">Your Hours / Week</label>
         <input type="number" id="inp-hours" placeholder="e.g. 3" min="0.1" max="168" step="0.5" />
       </div>
@@ -436,6 +458,20 @@
       return id;
     }
 
+    // ── Initials (remembered across sessions) ───────────────
+    const INITIALS_KEY = 'aib_initials';
+    function loadInitials()    { return localStorage.getItem(INITIALS_KEY) || ''; }
+    function saveInitials(val) { localStorage.setItem(INITIALS_KEY, val.toUpperCase().slice(0, 4)); }
+
+    // Deterministic avatar colour from initials string
+    function avatarColor(str) {
+      const palette = ['#0052cc','#00875a','#6554c0','#de350b','#ff8b00','#00b8d9','#36b37e','#505f79'];
+      if (!str) return '#dfe1e6';
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+      return palette[Math.abs(h) % palette.length];
+    }
+
     // ── Per-browser vote state (localStorage) ───────────────
     // Only the direction (up/down/null) lives locally; the actual
     // counts are in Supabase so everyone sees the same totals.
@@ -471,12 +507,17 @@
       return sbFetch('task_hours_estimates?select=task_id,hours,browser_id');
     }
 
-    async function insertTask(description, hours, details) {
+    async function insertTask(description, hours, details, submittedBy) {
       const rows = await sbFetch('automation_tasks', {
         method: 'POST',
-        body: JSON.stringify({ description, hours, details: details || null })
+        body: JSON.stringify({
+          description,
+          hours,
+          details:      details      || null,
+          submitted_by: submittedBy  || null
+        })
       });
-      return rows[0]; // returns the inserted row
+      return rows[0];
     }
 
     // Upsert: insert or update the calling browser's estimate for a task.
@@ -563,15 +604,17 @@
 
     // ── Submit ───────────────────────────────────────────────
     async function submitTask() {
-      const descEl    = document.getElementById('inp-desc');
-      const hrsEl     = document.getElementById('inp-hours');
-      const detailsEl = document.getElementById('inp-details');
-      const errEl     = document.getElementById('form-error');
-      const btnEl     = document.getElementById('btn-add');
+      const descEl     = document.getElementById('inp-desc');
+      const hrsEl      = document.getElementById('inp-hours');
+      const detailsEl  = document.getElementById('inp-details');
+      const initialsEl = document.getElementById('inp-initials');
+      const errEl      = document.getElementById('form-error');
+      const btnEl      = document.getElementById('btn-add');
 
       const description = descEl.value.trim();
       const hours       = parseFloat(hrsEl.value);
       const details     = detailsEl.value.trim();
+      const submittedBy = initialsEl.value.trim().toUpperCase().slice(0, 4);
 
       if (!description || !hrsEl.value.trim() || isNaN(hours) || hours <= 0) {
         errEl.style.display = 'block';
@@ -583,9 +626,11 @@
       setStatus('Saving…', 'loading');
 
       try {
-        const task = await insertTask(description, hours, details);
-        // Also register the submitter's hours as the first estimate
+        const task = await insertTask(description, hours, details, submittedBy);
+        // Register submitter's hours as the first crowd-sourced estimate
         await upsertEstimate(task.id, hours);
+        // Remember initials for next submission
+        if (submittedBy) saveInitials(submittedBy);
 
         descEl.value    = '';
         hrsEl.value     = '';
@@ -669,12 +714,13 @@
         const rows = sorted(tasks, estimates);
         if (!rows.length) { alert('No tasks to export yet.'); return; }
 
-        const header = 'Rank,Task Description,Details,Avg Hours/Week,Estimate Count,Net Score,Impact Score,Upvotes,Downvotes';
+        const header = 'Rank,Submitted By,Task Description,Details,Avg Hours/Week,Estimate Count,Net Score,Impact Score,Upvotes,Downvotes';
         const lines  = rows.map((t, i) => {
           const ed  = avgHoursData(t.id, estimates);
           const avg = ed ? ed.avg : Number(t.hours);
           return [
             i + 1,
+            '"' + (t.submitted_by || '').replace(/"/g, '""') + '"',
             '"' + t.description.replace(/"/g, '""') + '"',
             '"' + (t.details || '').replace(/"/g, '""') + '"',
             fmt(avg),
@@ -771,9 +817,13 @@
             <!-- Content -->
             <div class="task-content">
 
-              <!-- Top row: rank + description + badges + delete -->
+              <!-- Top row: rank + avatar + description + badges + delete -->
               <div class="task-top">
                 <span class="rank-num ${idx === 0 ? 'gold' : ''}">#${idx + 1}</span>
+                ${task.submitted_by
+                  ? `<span class="avatar" style="background:${avatarColor(task.submitted_by)}" title="Submitted by ${esc(task.submitted_by)}">${esc(task.submitted_by)}</span>`
+                  : `<span class="avatar empty" title="Anonymous">?</span>`
+                }
                 <span class="task-desc">${esc(task.description)}</span>
                 <div class="metrics">
                   <div class="badge ${hrsBadgeClass}" title="Average weekly hours across all team estimates">
@@ -847,6 +897,9 @@
 
     // ── Boot ─────────────────────────────────────────────────
     getBrowserId(); // initialise early so it's ready for the first render
+    // Pre-fill initials from last session
+    const _saved = loadInitials();
+    if (_saved) document.getElementById('inp-initials').value = _saved;
     setStatus('Loading shared board…', 'loading');
     loadAndRender();
 
