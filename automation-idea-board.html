@@ -393,8 +393,8 @@
       </div>
       <div class="field-group">
         <label for="inp-initials">Your Initials</label>
-        <input type="text" id="inp-initials" placeholder="e.g. MT" maxlength="4"
-          style="width:62px;text-transform:uppercase;" />
+        <input type="text" id="inp-initials" placeholder="e.g. MT" maxlength="5"
+          style="width:68px;text-transform:uppercase;" />
       </div>
       <div class="field-group">
         <label for="inp-hours">Your Hours / Week</label>
@@ -461,7 +461,7 @@
     // ── Initials (remembered across sessions) ───────────────
     const INITIALS_KEY = 'aib_initials';
     function loadInitials()    { return localStorage.getItem(INITIALS_KEY) || ''; }
-    function saveInitials(val) { localStorage.setItem(INITIALS_KEY, val.toUpperCase().slice(0, 4)); }
+    function saveInitials(val) { localStorage.setItem(INITIALS_KEY, val.toUpperCase().slice(0, 5)); }
 
     // Deterministic avatar colour from initials string
     function avatarColor(str) {
@@ -614,7 +614,7 @@
       const description = descEl.value.trim();
       const hours       = parseFloat(hrsEl.value);
       const details     = detailsEl.value.trim();
-      const submittedBy = initialsEl.value.trim().toUpperCase().slice(0, 4);
+      const submittedBy = initialsEl.value.trim().toUpperCase().slice(0, 5);
 
       if (!description || !hrsEl.value.trim() || isNaN(hours) || hours <= 0) {
         errEl.style.display = 'block';
