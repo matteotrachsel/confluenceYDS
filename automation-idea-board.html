@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Automation Idea Board</title>
 
-  <!-- =====================================================
-       STYLES — fully inline, zero external dependencies
-       ===================================================== -->
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -17,10 +14,10 @@
       line-height: 1.5;
       background: #f4f5f7;
       color: #172b4d;
-      padding: 14px 16px 20px;
+      padding: 14px 16px 24px;
     }
 
-    /* --- Header --- */
+    /* ── Header ── */
     .header {
       display: flex;
       align-items: center;
@@ -28,11 +25,9 @@
       margin-bottom: 14px;
       gap: 8px;
     }
-    .header h1 { font-size: 15px; font-weight: 700; color: #0052cc; letter-spacing: -0.2px; }
-    .header-sub { font-size: 11px; color: #97a0af; display: none; }
-    @media (min-width: 540px) { .header-sub { display: inline; } }
-
-    .header-actions { display: flex; gap: 6px; }
+    .header h1       { font-size: 15px; font-weight: 700; color: #0052cc; letter-spacing: -.2px; }
+    .header-sub      { font-size: 11px; color: #97a0af; display: none; }
+    @media (min-width: 520px) { .header-sub { display: inline; } }
 
     .btn-secondary {
       font-size: 11px;
@@ -43,33 +38,35 @@
       background: #fff;
       color: #42526e;
       cursor: pointer;
-      transition: background 0.12s, border-color 0.12s;
+      transition: background .12s, border-color .12s;
       white-space: nowrap;
     }
     .btn-secondary:hover { background: #ebecf0; border-color: #a5adba; }
 
-    /* --- Form card --- */
+    /* ── Form card ── */
     .form-card {
       background: #fff;
       border: 1px solid #dfe1e6;
       border-radius: 5px;
       padding: 12px 14px;
       margin-bottom: 12px;
-      box-shadow: 0 1px 2px rgba(23,43,77,0.04);
+      box-shadow: 0 1px 2px rgba(23,43,77,.04);
     }
-    .form-label-row {
+    .form-section-label {
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: .6px;
       color: #6b778c;
       margin-bottom: 10px;
     }
-    .form-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-    .field-group { display: flex; flex-direction: column; gap: 3px; }
-    .field-group.grow { flex: 1; min-width: 180px; }
+    .form-row          { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .field-group       { display: flex; flex-direction: column; gap: 3px; }
+    .field-group.grow  { flex: 1; min-width: 180px; }
     .field-group label { font-size: 11px; font-weight: 500; color: #42526e; }
-    .field-group input {
+
+    .field-group input,
+    .field-group textarea {
       border: 1.5px solid #c1c7d0;
       border-radius: 3px;
       padding: 5px 9px;
@@ -78,11 +75,37 @@
       color: #172b4d;
       background: #fff;
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color .15s, box-shadow .15s;
     }
-    .field-group input::placeholder { color: #b3bac5; }
-    .field-group input:focus { border-color: #0052cc; box-shadow: 0 0 0 2px rgba(0,82,204,0.14); }
+    .field-group input::placeholder,
+    .field-group textarea::placeholder { color: #b3bac5; }
+    .field-group input:focus,
+    .field-group textarea:focus {
+      border-color: #0052cc;
+      box-shadow: 0 0 0 2px rgba(0,82,204,.14);
+    }
     .field-group input[type="number"] { width: 86px; }
+    .field-group textarea {
+      resize: vertical;
+      min-height: 60px;
+      line-height: 1.4;
+    }
+
+    /* Details toggle row */
+    .details-toggle-row { margin-top: 8px; }
+    .btn-text-toggle {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 11px;
+      color: #0052cc;
+      cursor: pointer;
+      padding: 0;
+      transition: color .12s;
+    }
+    .btn-text-toggle:hover { color: #0065ff; text-decoration: underline; }
+    .details-field-row { margin-top: 8px; display: none; }
+    .details-field-row.open { display: block; }
 
     .btn-submit {
       padding: 6px 16px;
@@ -95,35 +118,33 @@
       font-family: inherit;
       cursor: pointer;
       white-space: nowrap;
-      transition: background 0.12s;
+      transition: background .12s;
       flex-shrink: 0;
     }
-    .btn-submit:hover { background: #0065ff; }
+    .btn-submit:hover    { background: #0065ff; }
     .btn-submit:disabled { background: #7ab3f5; cursor: not-allowed; }
 
     .form-error { font-size: 11px; color: #de350b; margin-top: 6px; display: none; }
 
-    /* --- Stats bar --- */
-    .stats-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 11px; }
-    .stat-chip {
-      background: #fff;
-      border: 1px solid #dfe1e6;
-      border-radius: 3px;
-      padding: 4px 10px;
-      font-size: 11px;
-      color: #6b778c;
-    }
+    /* ── Status bar ── */
+    .status-bar { font-size: 11px; padding: 5px 10px; border-radius: 3px; margin-bottom: 8px; display: none; }
+    .status-bar.loading { display: block; background: #f4f5f7; color: #6b778c; }
+    .status-bar.error   { display: block; background: #ffebe6; color: #de350b; }
+
+    /* ── Stats bar ── */
+    .stats-bar  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 11px; }
+    .stat-chip  { background: #fff; border: 1px solid #dfe1e6; border-radius: 3px; padding: 4px 10px; font-size: 11px; color: #6b778c; }
     .stat-chip strong { color: #172b4d; font-weight: 600; }
 
-    /* --- List header --- */
+    /* ── List header ── */
     .list-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px; }
-    .list-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #6b778c; }
-    .sort-hint { font-size: 10px; color: #b3bac5; }
+    .list-title  { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b778c; }
+    .sort-hint   { font-size: 10px; color: #b3bac5; }
 
-    /* --- Task list --- */
+    /* ── Task list ── */
     #task-list { display: flex; flex-direction: column; gap: 5px; }
 
-    /* --- Task card --- */
+    /* ── Task card ── */
     .task-card {
       background: #fff;
       border: 1px solid #dfe1e6;
@@ -131,9 +152,9 @@
       display: flex;
       align-items: stretch;
       overflow: hidden;
-      transition: box-shadow 0.12s, border-color 0.12s;
+      transition: box-shadow .12s, border-color .12s;
     }
-    .task-card:hover { box-shadow: 0 2px 6px rgba(23,43,77,0.09); border-color: #c1c7d0; }
+    .task-card:hover { box-shadow: 0 2px 6px rgba(23,43,77,.09); border-color: #c1c7d0; }
 
     /* Vote column */
     .vote-col {
@@ -146,6 +167,7 @@
       background: #f8f9fa;
       border-right: 1px solid #f0f1f3;
       min-width: 42px;
+      flex-shrink: 0;
     }
     .vote-btn {
       background: none;
@@ -156,25 +178,37 @@
       border-radius: 2px;
       font-size: 13px;
       line-height: 1;
-      transition: color 0.1s, background 0.1s, border-color 0.1s;
+      transition: color .1s, background .1s, border-color .1s;
     }
-    .vote-btn:hover { color: #0052cc; background: #deebff; border-color: #b3d4ff; }
-    .vote-btn.active-up   { color: #0052cc; background: #deebff; border-color: #b3d4ff; }
-    .vote-btn.active-down { color: #de350b; background: #ffebe6; border-color: #ffbdad; }
-    .vote-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .vote-btn:hover      { color: #0052cc; background: #deebff; border-color: #b3d4ff; }
+    .vote-btn.active-up  { color: #0052cc; background: #deebff; border-color: #b3d4ff; }
+    .vote-btn.active-dn  { color: #de350b; background: #ffebe6; border-color: #ffbdad; }
+    .vote-btn:disabled   { opacity: .4; cursor: not-allowed; }
 
-    .vote-score { font-size: 15px; font-weight: 700; color: #6b778c; line-height: 1; min-width: 20px; text-align: center; }
-    .vote-score.pos { color: #0052cc; }
-    .vote-score.neg { color: #de350b; }
+    .vote-score          { font-size: 15px; font-weight: 700; color: #6b778c; line-height: 1; min-width: 20px; text-align: center; }
+    .vote-score.pos      { color: #0052cc; }
+    .vote-score.neg      { color: #de350b; }
 
-    /* Task body */
-    .task-body { flex: 1; display: flex; align-items: center; gap: 8px; padding: 9px 10px; min-width: 0; }
-    .rank-num { font-size: 10px; font-weight: 700; color: #c1c7d0; min-width: 16px; flex-shrink: 0; }
-    .rank-num.gold { color: #ff991f; }
-    .task-desc { flex: 1; font-size: 12.5px; color: #172b4d; line-height: 1.4; word-break: break-word; }
+    /* Card content */
+    .task-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
 
-    /* Metric badges */
-    .metrics { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+    /* Top row: rank + desc + badges + delete */
+    .task-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px 7px;
+    }
+    .rank-num             { font-size: 10px; font-weight: 700; color: #c1c7d0; min-width: 16px; flex-shrink: 0; }
+    .rank-num.gold        { color: #ff991f; }
+    .task-desc            { flex: 1; font-size: 12.5px; color: #172b4d; line-height: 1.4; word-break: break-word; }
+
+    .metrics              { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
     .badge {
       display: flex;
       flex-direction: column;
@@ -183,15 +217,17 @@
       border-radius: 3px;
       border: 1px solid transparent;
       line-height: 1.2;
+      cursor: default;
     }
-    .badge .val { font-size: 13px; font-weight: 700; }
-    .badge .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; opacity: 0.75; }
+    .badge .val  { font-size: 13px; font-weight: 700; }
+    .badge .lbl  { font-size: 9px; text-transform: uppercase; letter-spacing: .3px; opacity: .75; white-space: nowrap; }
 
-    .badge-hrs  { background: #e6fcff; border-color: #b3f5ff; color: #008da6; }
-    .badge-imp         { background: #e3fcef; border-color: #abf5d1; color: #006644; }
-    .badge-imp.mid     { background: #fffae6; border-color: #ffe380; color: #974f0c; }
-    .badge-imp.high    { background: #ffebe6; border-color: #ffbdad; color: #ae2a19; }
-    .badge-imp.neutral { background: #f4f5f7; border-color: #dfe1e6; color: #6b778c; }
+    .badge-hrs          { background: #e6fcff; border-color: #b3f5ff; color: #008da6; }
+    .badge-hrs.pending  { background: #f4f5f7; border-color: #dfe1e6; color: #97a0af; }
+    .badge-imp          { background: #e3fcef; border-color: #abf5d1; color: #006644; }
+    .badge-imp.mid      { background: #fffae6; border-color: #ffe380; color: #974f0c; }
+    .badge-imp.high     { background: #ffebe6; border-color: #ffbdad; color: #ae2a19; }
+    .badge-imp.neutral  { background: #f4f5f7; border-color: #dfe1e6; color: #6b778c; }
 
     .btn-del {
       background: none;
@@ -203,23 +239,98 @@
       font-size: 12px;
       line-height: 1;
       flex-shrink: 0;
-      transition: color 0.1s, background 0.1s;
+      transition: color .1s, background .1s;
     }
     .btn-del:hover { color: #de350b; background: #ffebe6; }
 
-    /* --- Status / toast --- */
-    .status-bar {
+    /* Details row */
+    .task-details {
+      padding: 0 10px 7px 34px; /* align under description */
+      font-size: 11.5px;
+      color: #6b778c;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Estimate row */
+    .task-est-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px 8px 34px;
+      border-top: 1px solid #f4f5f7;
+      flex-wrap: wrap;
+    }
+    .est-info {
       font-size: 11px;
       color: #6b778c;
-      padding: 5px 10px;
-      border-radius: 3px;
-      margin-bottom: 8px;
-      display: none;
     }
-    .status-bar.loading { display: block; background: #f4f5f7; }
-    .status-bar.error   { display: block; background: #ffebe6; color: #de350b; }
+    .est-info strong { color: #172b4d; }
+    .est-mine {
+      font-size: 11px;
+      color: #42526e;
+      background: #f4f5f7;
+      border: 1px solid #dfe1e6;
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
 
-    /* --- Empty state --- */
+    .btn-est {
+      font-size: 11px;
+      font-family: inherit;
+      padding: 2px 9px;
+      border: 1px solid #0052cc;
+      border-radius: 10px;
+      background: #fff;
+      color: #0052cc;
+      cursor: pointer;
+      transition: background .12s;
+      white-space: nowrap;
+    }
+    .btn-est:hover { background: #deebff; }
+
+    .est-inline-form {
+      display: none;
+      align-items: center;
+      gap: 5px;
+    }
+    .est-inline-form.open { display: flex; }
+    .est-inline-input {
+      width: 70px;
+      border: 1.5px solid #c1c7d0;
+      border-radius: 3px;
+      padding: 3px 7px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .est-inline-input:focus { border-color: #0052cc; }
+    .btn-est-save {
+      padding: 3px 10px;
+      background: #0052cc;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .12s;
+    }
+    .btn-est-save:hover { background: #0065ff; }
+    .btn-est-cancel {
+      background: none;
+      border: none;
+      font-size: 11px;
+      font-family: inherit;
+      color: #6b778c;
+      cursor: pointer;
+      padding: 3px 4px;
+    }
+    .btn-est-cancel:hover { color: #172b4d; }
+
+    /* ── Empty state ── */
     .empty {
       text-align: center;
       padding: 28px 16px;
@@ -232,7 +343,7 @@
     .empty .empty-icon { font-size: 22px; margin-bottom: 6px; }
     .empty .empty-head { font-size: 13px; font-weight: 600; color: #6b778c; margin-bottom: 3px; }
 
-    /* --- Legend --- */
+    /* ── Legend ── */
     .legend { margin-top: 11px; font-size: 10px; color: #97a0af; display: flex; gap: 10px; flex-wrap: wrap; }
     .legend span { display: flex; align-items: center; gap: 3px; }
     .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -249,14 +360,13 @@
       <h1>⚡ AI Automation Idea Board</h1>
       <span class="header-sub">— Vote for the tasks worth automating most</span>
     </div>
-    <div class="header-actions">
-      <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
-    </div>
+    <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
   </div>
 
   <!-- SUBMIT FORM -->
   <div class="form-card">
-    <div class="form-label-row">Submit a Repetitive Task</div>
+    <div class="form-section-label">Submit a Repetitive Task</div>
+
     <div class="form-row">
       <div class="field-group grow">
         <label for="inp-desc">Task Description</label>
@@ -265,15 +375,29 @@
           maxlength="200" />
       </div>
       <div class="field-group">
-        <label for="inp-hours">Hours / Week</label>
+        <label for="inp-hours">Your Hours / Week</label>
         <input type="number" id="inp-hours" placeholder="e.g. 3" min="0.1" max="168" step="0.5" />
       </div>
       <button class="btn-submit" id="btn-add" onclick="submitTask()">+ Add Task</button>
     </div>
+
+    <!-- Collapsible details field -->
+    <div class="details-toggle-row">
+      <button class="btn-text-toggle" id="details-toggle" onclick="toggleDetails()">+ Add details</button>
+    </div>
+    <div class="details-field-row" id="details-field-row">
+      <div class="field-group grow">
+        <label for="inp-details">Additional Details <span style="font-weight:400;color:#97a0af;">(optional)</span></label>
+        <textarea id="inp-details"
+          placeholder="Steps involved, systems used, who is affected, any context that helps the team understand the pain…"
+          maxlength="1000"></textarea>
+      </div>
+    </div>
+
     <div class="form-error" id="form-error">Please provide a task description and a valid number of hours.</div>
   </div>
 
-  <!-- STATUS BAR -->
+  <!-- STATUS -->
   <div class="status-bar" id="status-bar"></div>
 
   <!-- STATS -->
@@ -282,7 +406,7 @@
   <!-- LIST -->
   <div class="list-header">
     <span class="list-title">Automation Targets</span>
-    <span class="sort-hint">Ranked by score · Impact = Score × Hours/Week · shared across team</span>
+    <span class="sort-hint">Ranked by score · Impact = Score × Avg Hours · shared across team</span>
   </div>
   <div id="task-list"></div>
 
@@ -293,101 +417,131 @@
   </div>
 
 
-  <!-- =====================================================
-       JAVASCRIPT
-       ===================================================== -->
   <script>
-    // ─── Supabase config ────────────────────────────────────
-    const SUPA_URL    = 'https://otltsqgdbyaiswkrosan.supabase.co';
-    const SUPA_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bHRzcWdkYnlhaXN3a3Jvc2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTk4MzYsImV4cCI6MjA5NjA3NTgzNn0.JTRnGbjIEvvC7DCTBXyld8qqUF5wJO8nCz36njBU0Fc';
-    const TABLE       = 'automation_tasks';
-    const HEADERS     = { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+    // ── Supabase config ─────────────────────────────────────
+    const SUPA_URL  = 'https://otltsqgdbyaiswkrosan.supabase.co';
+    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bHRzcWdkYnlhaXN3a3Jvc2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTk4MzYsImV4cCI6MjA5NjA3NTgzNn0.JTRnGbjIEvvC7DCTBXyld8qqUF5wJO8nCz36njBU0Fc';
+    const BASE_HDR  = { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 
-    // ─── Local vote state ────────────────────────────────────
-    // Votes are stored in localStorage per-browser so each user
-    // can only cast one vote per task, while the counts themselves
-    // live in Supabase and are shared across the whole team.
-    const VOTE_KEY    = 'aib_votes_v1';
+    // ── Browser identity ────────────────────────────────────
+    // A stable random ID stored in localStorage identifies this
+    // browser for vote deduplication and hours-estimate ownership.
+    function getBrowserId() {
+      const KEY = 'aib_browser_id';
+      let id = localStorage.getItem(KEY);
+      if (!id) {
+        id = (crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2));
+        localStorage.setItem(KEY, id);
+      }
+      return id;
+    }
 
-    function loadVotes()       { try { return JSON.parse(localStorage.getItem(VOTE_KEY) || '{}'); } catch { return {}; } }
-    function saveVotes(v)      { localStorage.setItem(VOTE_KEY, JSON.stringify(v)); }
-    function myVote(id)        { return loadVotes()[id] || null; }
-    function setMyVote(id, d)  { const v = loadVotes(); v[id] = d; saveVotes(v); }
-    function clearMyVote(id)   { const v = loadVotes(); delete v[id]; saveVotes(v); }
+    // ── Per-browser vote state (localStorage) ───────────────
+    // Only the direction (up/down/null) lives locally; the actual
+    // counts are in Supabase so everyone sees the same totals.
+    const VOTE_KEY = 'aib_votes_v1';
+    function loadVotes()      { try { return JSON.parse(localStorage.getItem(VOTE_KEY) || '{}'); } catch { return {}; } }
+    function saveVotes(v)     { localStorage.setItem(VOTE_KEY, JSON.stringify(v)); }
+    function myVote(id)       { return loadVotes()[id] || null; }
+    function setMyVote(id, d) { const v = loadVotes(); v[id] = d; saveVotes(v); }
+    function clearMyVote(id)  { const v = loadVotes(); delete v[id]; saveVotes(v); }
 
-    // ─── REST helpers ────────────────────────────────────────
+    // ── In-memory render cache ──────────────────────────────
+    let _tasks = [], _estimates = [];
+    // Track which estimate forms are open so re-renders keep them visible
+    const openEstForms = new Set();
+
+    // ── REST helper ─────────────────────────────────────────
     async function sbFetch(path, opts = {}) {
       const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
         ...opts,
-        headers: { ...HEADERS, ...(opts.headers || {}) }
+        headers: { ...BASE_HDR, ...(opts.headers || {}) }
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || res.statusText);
-      }
-      const text = await res.text();
-      return text ? JSON.parse(text) : null;
+      if (!res.ok) throw new Error((await res.text()) || res.statusText);
+      const txt = await res.text();
+      return txt ? JSON.parse(txt) : null;
     }
 
-    async function fetchTasks() {
-      return sbFetch(`${TABLE}?select=*&order=created_at.asc`);
+    // ── API calls ────────────────────────────────────────────
+    function fetchTasks() {
+      return sbFetch('automation_tasks?select=*&order=created_at.asc');
     }
 
-    async function insertTask(description, hours) {
-      return sbFetch(TABLE, {
+    function fetchEstimates() {
+      return sbFetch('task_hours_estimates?select=task_id,hours,browser_id');
+    }
+
+    async function insertTask(description, hours, details) {
+      const rows = await sbFetch('automation_tasks', {
         method: 'POST',
-        body: JSON.stringify({ description, hours })
+        body: JSON.stringify({ description, hours, details: details || null })
+      });
+      return rows[0]; // returns the inserted row
+    }
+
+    // Upsert: insert or update the calling browser's estimate for a task.
+    // The UNIQUE(task_id, browser_id) constraint plus merge-duplicates
+    // ensures each browser submits exactly one estimate per task.
+    function upsertEstimate(taskId, hours) {
+      return sbFetch('task_hours_estimates', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({ task_id: taskId, hours, browser_id: getBrowserId() })
       });
     }
 
-    async function incrementVote(id, col, delta) {
-      // Use Supabase RPC-style arithmetic update via PATCH + raw SQL expression
-      // PostgREST supports arithmetic with ?= syntax via headers
-      return sbFetch(`${TABLE}?id=eq.${id}`, {
+    async function patchVoteCount(id, col, delta) {
+      const rows = await sbFetch(`automation_tasks?id=eq.${id}&select=${col}`);
+      const next  = Math.max(0, ((rows?.[0]?.[col]) ?? 0) + delta);
+      return sbFetch(`automation_tasks?id=eq.${id}`, {
         method: 'PATCH',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ [col]: `${col} + ${delta}` })
-      }).catch(() => {
-        // Fallback: fetch current value then PATCH with explicit number
-        return sbFetch(`${TABLE}?id=eq.${id}&select=${col}`)
-          .then(rows => {
-            const current = rows?.[0]?.[col] ?? 0;
-            const next    = Math.max(0, current + delta);
-            return sbFetch(`${TABLE}?id=eq.${id}`, {
-              method: 'PATCH',
-              headers: { 'Prefer': 'return=representation' },
-              body: JSON.stringify({ [col]: next })
-            });
-          });
+        body: JSON.stringify({ [col]: next })
       });
     }
 
-    async function deleteTask(id) {
-      return sbFetch(`${TABLE}?id=eq.${id}`, { method: 'DELETE' });
+    function deleteTask(id) {
+      return sbFetch(`automation_tasks?id=eq.${id}`, { method: 'DELETE' });
     }
 
-    // ─── Computed helpers ────────────────────────────────────
-    function netScore(t)  { return (t.upvotes || 0) - (t.downvotes || 0); }
-    function impact(t)    { return netScore(t) * (t.hours || 0); }
+    // ── Computed helpers ─────────────────────────────────────
+    function netScore(t) { return (t.upvotes || 0) - (t.downvotes || 0); }
+
+    function avgHoursData(taskId, estimates) {
+      const rows = estimates.filter(e => e.task_id === taskId);
+      if (!rows.length) return null;
+      const avg = rows.reduce((s, e) => s + Number(e.hours), 0) / rows.length;
+      return { avg, count: rows.length };
+    }
+
+    function impactScore(t, avgHrs) {
+      const hrs = avgHrs ?? Number(t.hours) ?? 0;
+      return netScore(t) * hrs;
+    }
+
     function impactClass(s) {
-      if (s > 20)  return 'high';
-      if (s >= 8)  return 'mid';
-      if (s <= 0)  return 'neutral';
+      if (s > 20) return 'high';
+      if (s >= 8) return 'mid';
+      if (s <= 0) return 'neutral';
       return '';
     }
-    function sorted(tasks) {
+
+    function sorted(tasks, estimates) {
       return [...tasks].sort((a, b) => {
+        const aAvg = avgHoursData(a.id, estimates)?.avg ?? Number(a.hours);
+        const bAvg = avgHoursData(b.id, estimates)?.avg ?? Number(b.hours);
         const sd = netScore(b) - netScore(a);
-        return sd !== 0 ? sd : impact(b) - impact(a);
+        return sd !== 0 ? sd : impactScore(b, bAvg) - impactScore(a, aAvg);
       });
     }
-    function esc(str) {
-      return String(str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    function fmt(n) { return Number.isInteger(n) ? String(n) : Number(n).toFixed(1); }
+    function esc(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    // ─── UI state ────────────────────────────────────────────
+    // ── UI helpers ───────────────────────────────────────────
     function setStatus(msg, type = '') {
       const el = document.getElementById('status-bar');
       el.textContent = msg;
@@ -399,15 +553,25 @@
       el.className   = 'status-bar';
     }
 
-    // ─── Submit ──────────────────────────────────────────────
+    function toggleDetails() {
+      const row = document.getElementById('details-field-row');
+      const btn = document.getElementById('details-toggle');
+      const open = row.classList.toggle('open');
+      btn.textContent = open ? '− Hide details' : '+ Add details';
+      if (open) document.getElementById('inp-details').focus();
+    }
+
+    // ── Submit ───────────────────────────────────────────────
     async function submitTask() {
-      const descEl = document.getElementById('inp-desc');
-      const hrsEl  = document.getElementById('inp-hours');
-      const errEl  = document.getElementById('form-error');
-      const btnEl  = document.getElementById('btn-add');
+      const descEl    = document.getElementById('inp-desc');
+      const hrsEl     = document.getElementById('inp-hours');
+      const detailsEl = document.getElementById('inp-details');
+      const errEl     = document.getElementById('form-error');
+      const btnEl     = document.getElementById('btn-add');
 
       const description = descEl.value.trim();
       const hours       = parseFloat(hrsEl.value);
+      const details     = detailsEl.value.trim();
 
       if (!description || !hrsEl.value.trim() || isNaN(hours) || hours <= 0) {
         errEl.style.display = 'block';
@@ -419,10 +583,13 @@
       setStatus('Saving…', 'loading');
 
       try {
-        await insertTask(description, hours);
-        descEl.value = '';
-        hrsEl.value  = '';
-        descEl.focus();
+        const task = await insertTask(description, hours, details);
+        // Also register the submitter's hours as the first estimate
+        await upsertEstimate(task.id, hours);
+
+        descEl.value    = '';
+        hrsEl.value     = '';
+        detailsEl.value = '';
         clearStatus();
         await loadAndRender();
       } catch (e) {
@@ -432,40 +599,35 @@
       }
     }
 
-    // ─── Vote ────────────────────────────────────────────────
+    // ── Vote ─────────────────────────────────────────────────
     async function vote(id, dir) {
       const current = myVote(id);
-      setVoteBtnsDisabled(id, true);
+      document.querySelectorAll(`[data-id="${id}"] .vote-btn`).forEach(b => b.disabled = true);
 
       try {
         if (current === dir) {
-          // Undo
-          await incrementVote(id, dir === 'up' ? 'upvotes' : 'downvotes', -1);
+          await patchVoteCount(id, dir === 'up' ? 'upvotes' : 'downvotes', -1);
           clearMyVote(id);
         } else {
-          // Reverse previous if any
-          if (current === 'up')   await incrementVote(id, 'upvotes',   -1);
-          if (current === 'down') await incrementVote(id, 'downvotes', -1);
-          // Apply new
-          await incrementVote(id, dir === 'up' ? 'upvotes' : 'downvotes', 1);
+          if (current === 'up')   await patchVoteCount(id, 'upvotes',   -1);
+          if (current === 'down') await patchVoteCount(id, 'downvotes', -1);
+          await patchVoteCount(id, dir === 'up' ? 'upvotes' : 'downvotes', 1);
           setMyVote(id, dir);
         }
         await loadAndRender();
       } catch (e) {
         setStatus('Vote failed — ' + e.message, 'error');
         setTimeout(clearStatus, 3000);
+        render(_tasks, _estimates); // re-enable buttons
       }
     }
 
-    function setVoteBtnsDisabled(id, disabled) {
-      document.querySelectorAll(`[data-id="${id}"] .vote-btn`).forEach(b => b.disabled = disabled);
-    }
-
-    // ─── Delete ──────────────────────────────────────────────
+    // ── Delete ───────────────────────────────────────────────
     async function handleDelete(id) {
       try {
         await deleteTask(id);
         clearMyVote(id);
+        openEstForms.delete(id);
         await loadAndRender();
       } catch (e) {
         setStatus('Delete failed — ' + e.message, 'error');
@@ -473,24 +635,60 @@
       }
     }
 
-    // ─── Export ──────────────────────────────────────────────
+    // ── Estimate helpers ─────────────────────────────────────
+    function openEstimate(taskId) {
+      openEstForms.add(taskId);
+      render(_tasks, _estimates);
+      document.getElementById(`est-inp-${taskId}`)?.focus();
+    }
+
+    function cancelEstimate(taskId) {
+      openEstForms.delete(taskId);
+      render(_tasks, _estimates);
+    }
+
+    async function saveEstimate(taskId) {
+      const inp   = document.getElementById(`est-inp-${taskId}`);
+      const hours = parseFloat(inp?.value);
+      if (!hours || hours <= 0) { inp?.focus(); return; }
+
+      try {
+        await upsertEstimate(taskId, hours);
+        openEstForms.delete(taskId);
+        await loadAndRender();
+      } catch (e) {
+        setStatus('Could not save estimate — ' + e.message, 'error');
+        setTimeout(clearStatus, 3000);
+      }
+    }
+
+    // ── Export ───────────────────────────────────────────────
     async function exportCSV() {
       try {
-        const tasks = sorted(await fetchTasks());
-        if (!tasks.length) { alert('No tasks to export yet.'); return; }
-        const header = 'Rank,Task Description,Hours/Week,Net Score,Impact Score,Upvotes,Downvotes';
-        const rows = tasks.map((t, i) => [
-          i + 1,
-          '"' + t.description.replace(/"/g, '""') + '"',
-          t.hours,
-          netScore(t),
-          impact(t).toFixed(1),
-          t.upvotes || 0,
-          t.downvotes || 0
-        ].join(','));
-        const blob = new Blob([[header, ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-        const a = Object.assign(document.createElement('a'), {
-          href: URL.createObjectURL(blob),
+        const [tasks, estimates] = await Promise.all([fetchTasks(), fetchEstimates()]);
+        const rows = sorted(tasks, estimates);
+        if (!rows.length) { alert('No tasks to export yet.'); return; }
+
+        const header = 'Rank,Task Description,Details,Avg Hours/Week,Estimate Count,Net Score,Impact Score,Upvotes,Downvotes';
+        const lines  = rows.map((t, i) => {
+          const ed  = avgHoursData(t.id, estimates);
+          const avg = ed ? ed.avg : Number(t.hours);
+          return [
+            i + 1,
+            '"' + t.description.replace(/"/g, '""') + '"',
+            '"' + (t.details || '').replace(/"/g, '""') + '"',
+            fmt(avg),
+            ed ? ed.count : 1,
+            netScore(t),
+            fmt(impactScore(t, avg)),
+            t.upvotes  || 0,
+            t.downvotes || 0
+          ].join(',');
+        });
+
+        const blob = new Blob([[header, ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const a    = Object.assign(document.createElement('a'), {
+          href:     URL.createObjectURL(blob),
           download: 'automation_ideas_' + new Date().toISOString().slice(0, 10) + '.csv'
         });
         a.click();
@@ -501,22 +699,32 @@
       }
     }
 
-    // ─── Render ──────────────────────────────────────────────
-    function renderStats(tasks) {
+    // ── Render ───────────────────────────────────────────────
+    function renderStats(tasks, estimates) {
       const bar = document.getElementById('stats-bar');
       if (!tasks.length) { bar.innerHTML = ''; return; }
-      const totalHrs = tasks.reduce((s, t) => s + Number(t.hours || 0), 0);
-      const top      = sorted(tasks)[0];
+
+      const totalEstimates = estimates.length;
+      const taskCount      = tasks.length;
+      const top            = sorted(tasks, estimates)[0];
+      const topEd          = top ? avgHoursData(top.id, estimates) : null;
+      const topAvg         = topEd?.avg ?? Number(top?.hours ?? 0);
+
       bar.innerHTML =
-        `<div class="stat-chip">Ideas: <strong>${tasks.length}</strong></div>` +
-        `<div class="stat-chip">Total hours/week at risk: <strong>${Number.isInteger(totalHrs) ? totalHrs : totalHrs.toFixed(1)}h</strong></div>` +
-        (top ? `<div class="stat-chip">Top target impact: <strong>${impact(top).toFixed(1)}</strong></div>` : '');
+        `<div class="stat-chip">Ideas: <strong>${taskCount}</strong></div>` +
+        `<div class="stat-chip">Hours estimates: <strong>${totalEstimates}</strong></div>` +
+        (top ? `<div class="stat-chip">Top impact: <strong>${fmt(impactScore(top, topAvg))}</strong></div>` : '');
     }
 
-    function renderList(tasks) {
+    function render(tasks, estimates) {
+      _tasks = tasks;
+      _estimates = estimates;
+
       const listEl  = document.getElementById('task-list');
       const legend  = document.getElementById('legend');
-      const ordered = sorted(tasks);
+      const ordered = sorted(tasks, estimates);
+
+      renderStats(tasks, estimates);
 
       if (!ordered.length) {
         legend.style.display = 'none';
@@ -530,63 +738,119 @@
       }
 
       legend.style.display = 'flex';
+      const bid = getBrowserId();
+
       listEl.innerHTML = ordered.map((task, idx) => {
-        const score  = netScore(task);
-        const imp    = impact(task);
-        const voted  = myVote(task.id);
-        const hrsVal = Number(task.hours);
+        const score   = netScore(task);
+        const voted   = myVote(task.id);
+        const ed      = avgHoursData(task.id, estimates);
+        const avgHrs  = ed ? ed.avg : Number(task.hours);
+        const imp     = impactScore(task, avgHrs);
+        const myEst   = estimates.find(e => e.task_id === task.id && e.browser_id === bid);
+        const estOpen = openEstForms.has(task.id);
+
+        // Hours badge: show avg if estimates exist, otherwise the submitter's value
+        const hrsLabel = ed
+          ? `avg · ${ed.count} ${ed.count === 1 ? 'person' : 'people'}`
+          : '1 estimate';
+        const hrsValue = fmt(avgHrs) + 'h';
+        const hrsBadgeClass = 'badge-hrs' + (!ed ? ' pending' : '');
 
         return `
           <div class="task-card" data-id="${task.id}">
+
+            <!-- Vote column -->
             <div class="vote-col">
-              <button class="vote-btn ${voted === 'up' ? 'active-up' : ''}"
-                      onclick="vote('${task.id}','up')" title="Upvote — I face this too">▲</button>
+              <button class="vote-btn ${voted === 'up'   ? 'active-up' : ''}"
+                      onclick="vote('${task.id}','up')"   title="Upvote — I face this too">▲</button>
               <span class="vote-score ${score > 0 ? 'pos' : score < 0 ? 'neg' : ''}">${score}</span>
-              <button class="vote-btn ${voted === 'down' ? 'active-down' : ''}"
+              <button class="vote-btn ${voted === 'down' ? 'active-dn' : ''}"
                       onclick="vote('${task.id}','down')" title="Downvote — low priority">▼</button>
             </div>
-            <div class="task-body">
-              <span class="rank-num ${idx === 0 ? 'gold' : ''}">#${idx + 1}</span>
-              <span class="task-desc">${esc(task.description)}</span>
-              <div class="metrics">
-                <div class="badge badge-hrs" title="Hours spent per week">
-                  <span class="val">${Number.isInteger(hrsVal) ? hrsVal : hrsVal.toFixed(1)}h</span>
-                  <span class="lbl">/ week</span>
+
+            <!-- Content -->
+            <div class="task-content">
+
+              <!-- Top row: rank + description + badges + delete -->
+              <div class="task-top">
+                <span class="rank-num ${idx === 0 ? 'gold' : ''}">#${idx + 1}</span>
+                <span class="task-desc">${esc(task.description)}</span>
+                <div class="metrics">
+                  <div class="badge ${hrsBadgeClass}" title="Average weekly hours across all team estimates">
+                    <span class="val">${hrsValue}</span>
+                    <span class="lbl">${hrsLabel}</span>
+                  </div>
+                  <div class="badge badge-imp ${impactClass(imp)}" title="Impact = Net Score × Avg Hours/Week">
+                    <span class="val">${fmt(imp)}</span>
+                    <span class="lbl">impact</span>
+                  </div>
                 </div>
-                <div class="badge badge-imp ${impactClass(imp)}" title="Impact = Net Score × Hours/Week">
-                  <span class="val">${Number.isInteger(imp) ? imp : imp.toFixed(1)}</span>
-                  <span class="lbl">impact</span>
+                <button class="btn-del" onclick="handleDelete('${task.id}')" title="Remove">✕</button>
+              </div>
+
+              <!-- Details row (only if details exist) -->
+              ${task.details ? `<div class="task-details">${esc(task.details)}</div>` : ''}
+
+              <!-- Estimate row -->
+              <div class="task-est-row">
+                <span class="est-info">
+                  ⏱
+                  ${ed
+                    ? `Avg <strong>${fmt(ed.avg)}h</strong>/week from <strong>${ed.count}</strong> ${ed.count === 1 ? 'estimate' : 'estimates'}`
+                    : `<strong>${fmt(avgHrs)}h</strong>/week (submitter's estimate)`
+                  }
+                </span>
+
+                ${myEst && !estOpen
+                  ? `<span class="est-mine">Your estimate: ${fmt(myEst.hours)}h</span>
+                     <button class="btn-est" onclick="openEstimate('${task.id}')">Edit</button>`
+                  : !estOpen
+                    ? `<button class="btn-est" onclick="openEstimate('${task.id}')">+ Your estimate</button>`
+                    : ''
+                }
+
+                <!-- Inline estimate form -->
+                <div class="est-inline-form ${estOpen ? 'open' : ''}" id="est-form-${task.id}">
+                  <input
+                    class="est-inline-input"
+                    type="number"
+                    id="est-inp-${task.id}"
+                    placeholder="hrs"
+                    min="0.1" max="168" step="0.5"
+                    value="${myEst ? myEst.hours : ''}"
+                    onkeydown="if(event.key==='Enter') saveEstimate('${task.id}'); if(event.key==='Escape') cancelEstimate('${task.id}');"
+                  />
+                  <button class="btn-est-save"   onclick="saveEstimate('${task.id}')">Save</button>
+                  <button class="btn-est-cancel" onclick="cancelEstimate('${task.id}')">✕</button>
                 </div>
               </div>
-              <button class="btn-del" onclick="handleDelete('${task.id}')" title="Remove">✕</button>
-            </div>
+
+            </div><!-- /task-content -->
           </div>`;
       }).join('');
     }
 
+    // ── Load & render ────────────────────────────────────────
     async function loadAndRender() {
       try {
-        const tasks = await fetchTasks();
-        renderStats(tasks);
-        renderList(tasks);
+        const [tasks, estimates] = await Promise.all([fetchTasks(), fetchEstimates()]);
+        render(tasks, estimates);
         clearStatus();
       } catch (e) {
-        setStatus('Could not load tasks — ' + e.message, 'error');
+        setStatus('Could not load data — ' + e.message, 'error');
       }
     }
 
-    // ─── Keyboard shortcuts ──────────────────────────────────
-    ['inp-desc', 'inp-hours'].forEach(id => {
-      document.getElementById(id).addEventListener('keydown', e => {
-        if (e.key === 'Enter') submitTask();
-      });
-    });
+    // ── Keyboard shortcuts ───────────────────────────────────
+    document.getElementById('inp-desc').addEventListener('keydown',  e => { if (e.key === 'Enter') submitTask(); });
+    document.getElementById('inp-hours').addEventListener('keydown', e => { if (e.key === 'Enter') submitTask(); });
 
-    // ─── Boot ────────────────────────────────────────────────
+    // ── Boot ─────────────────────────────────────────────────
+    getBrowserId(); // initialise early so it's ready for the first render
     setStatus('Loading shared board…', 'loading');
     loadAndRender();
 
-    // Auto-refresh every 30 s so team votes appear without manual reload
+    // Auto-refresh every 30 s so new ideas and votes appear for everyone
     setInterval(loadAndRender, 30_000);
   </script>
 
