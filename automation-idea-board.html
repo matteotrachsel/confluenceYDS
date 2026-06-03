@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Automation Idea Board</title>
+
+  <!-- =====================================================
+       STYLES — all inline, zero external dependencies
+       ===================================================== -->
+  <style>
+    /* --- Reset & Base --- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      background: #f4f5f7;
+      color: #172b4d;
+      padding: 14px 16px 20px;
+    }
+
+    /* --- Header row --- */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 8px; }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0052cc;
+      letter-spacing: -0.2px;
+    }
+
+    .header-sub {
+      font-size: 11px;
+      color: #97a0af;
+      display: none; /* shown on wider viewports */
+    }
+
+    @media (min-width: 540px) { .header-sub { display: inline; } }
+
+    /* --- Export button --- */
+    .btn-export {
+      font-size: 11px;
+      font-family: inherit;
+      padding: 4px 11px;
+      border: 1px solid #c1c7d0;
+      border-radius: 3px;
+      background: #fff;
+      color: #42526e;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+    .btn-export:hover { background: #ebecf0; border-color: #a5adba; }
+
+    /* --- Submit form card --- */
+    .form-card {
+      background: #fff;
+      border: 1px solid #dfe1e6;
+      border-radius: 5px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(23,43,77,0.04);
+    }
+
+    .form-label-row {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6b778c;
+      margin-bottom: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 3px; }
+    .field-group.grow { flex: 1; min-width: 180px; }
+    .field-group.shrink { flex-shrink: 0; }
+
+    .field-group label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #42526e;
+    }
+
+    .field-group input {
+      border: 1.5px solid #c1c7d0;
+      border-radius: 3px;
+      padding: 5px 9px;
+      font-size: 12.5px;
+      font-family: inherit;
+      color: #172b4d;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field-group input::placeholder { color: #b3bac5; }
+
+    .field-group input:focus {
+      border-color: #0052cc;
+      box-shadow: 0 0 0 2px rgba(0,82,204,0.14);
+    }
+
+    .field-group input[type="number"] { width: 86px; }
+
+    .btn-submit {
+      padding: 6px 16px;
+      background: #0052cc;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+    .btn-submit:hover { background: #0065ff; }
+    .btn-submit:active { background: #003e99; }
+
+    .form-error {
+      font-size: 11px;
+      color: #de350b;
+      margin-top: 6px;
+      display: none;
+    }
+
+    /* --- Stats bar --- */
+    .stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 11px;
+    }
+
+    .stat-chip {
+      background: #fff;
+      border: 1px solid #dfe1e6;
+      border-radius: 3px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #6b778c;
+    }
+
+    .stat-chip strong { color: #172b4d; font-weight: 600; }
+
+    /* --- List header --- */
+    .list-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+
+    .list-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6b778c;
+    }
+
+    .sort-hint { font-size: 10px; color: #b3bac5; }
+
+    /* --- Task list --- */
+    #task-list { display: flex; flex-direction: column; gap: 5px; }
+
+    /* --- Task card --- */
+    .task-card {
+      background: #fff;
+      border: 1px solid #dfe1e6;
+      border-radius: 4px;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      transition: box-shadow 0.12s, border-color 0.12s;
+    }
+
+    .task-card:hover {
+      box-shadow: 0 2px 6px rgba(23,43,77,0.09);
+      border-color: #c1c7d0;
+    }
+
+    /* Left vote column — Stack Overflow style */
+    .vote-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 9px;
+      gap: 1px;
+      background: #f8f9fa;
+      border-right: 1px solid #f0f1f3;
+      min-width: 42px;
+    }
+
+    .vote-btn {
+      background: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      color: #b3bac5;
+      padding: 2px 5px;
+      border-radius: 2px;
+      font-size: 13px;
+      line-height: 1;
+      transition: color 0.1s, background 0.1s, border-color 0.1s;
+    }
+
+    .vote-btn:hover {
+      color: #0052cc;
+      background: #deebff;
+      border-color: #b3d4ff;
+    }
+
+    .vote-btn.active-up   { color: #0052cc; background: #deebff; border-color: #b3d4ff; }
+    .vote-btn.active-down { color: #de350b; background: #ffebe6; border-color: #ffbdad; }
+
+    .vote-score {
+      font-size: 15px;
+      font-weight: 700;
+      color: #6b778c;
+      line-height: 1;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .vote-score.pos { color: #0052cc; }
+    .vote-score.neg { color: #de350b; }
+
+    /* Task body */
+    .task-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px 9px 10px;
+      min-width: 0;
+    }
+
+    .rank-num {
+      font-size: 10px;
+      font-weight: 700;
+      color: #c1c7d0;
+      min-width: 16px;
+      flex-shrink: 0;
+    }
+    .rank-num.gold { color: #ff991f; }
+
+    .task-desc {
+      flex: 1;
+      font-size: 12.5px;
+      color: #172b4d;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    /* Metric badges */
+    .metrics { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+
+    .badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      line-height: 1.2;
+    }
+
+    .badge .val {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .badge .lbl {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      opacity: 0.75;
+    }
+
+    /* Hours badge — teal */
+    .badge-hrs {
+      background: #e6fcff;
+      border-color: #b3f5ff;
+      color: #008da6;
+    }
+
+    /* Impact badge — green default, amber medium, red high */
+    .badge-imp         { background: #e3fcef; border-color: #abf5d1; color: #006644; }
+    .badge-imp.mid     { background: #fffae6; border-color: #ffe380; color: #974f0c; }
+    .badge-imp.high    { background: #ffebe6; border-color: #ffbdad; color: #ae2a19; }
+    .badge-imp.neutral { background: #f4f5f7; border-color: #dfe1e6; color: #6b778c; }
+
+    /* Delete button */
+    .btn-del {
+      background: none;
+      border: none;
+      color: #dfe1e6;
+      cursor: pointer;
+      padding: 4px 5px;
+      border-radius: 2px;
+      font-size: 12px;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: color 0.1s, background 0.1s;
+    }
+    .btn-del:hover { color: #de350b; background: #ffebe6; }
+
+    /* --- Empty state --- */
+    .empty {
+      text-align: center;
+      padding: 28px 16px;
+      color: #97a0af;
+      font-size: 12px;
+      background: #fff;
+      border: 1.5px dashed #dfe1e6;
+      border-radius: 5px;
+    }
+
+    .empty .empty-icon { font-size: 22px; margin-bottom: 6px; }
+    .empty .empty-head { font-size: 13px; font-weight: 600; color: #6b778c; margin-bottom: 3px; }
+
+    /* --- Impact legend --- */
+    .legend {
+      margin-top: 11px;
+      font-size: 10px;
+      color: #97a0af;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .legend span { display: flex; align-items: center; gap: 3px; }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot-low  { background: #36b37e; }
+    .dot-mid  { background: #ff991f; }
+    .dot-high { background: #de350b; }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+  <div class="header">
+    <div class="header-left">
+      <h1>⚡ AI Automation Idea Board</h1>
+      <span class="header-sub">— Vote for the tasks worth automating most</span>
+    </div>
+    <button class="btn-export" onclick="exportCSV()" title="Download all ideas as CSV">⬇ Export CSV</button>
+  </div>
+
+  <!-- =====================================================
+       SUBMIT FORM
+       ===================================================== -->
+  <div class="form-card">
+    <div class="form-label-row">Submit a Repetitive Task</div>
+    <div class="form-row">
+      <div class="field-group grow">
+        <label for="inp-desc">Task Description</label>
+        <input
+          type="text"
+          id="inp-desc"
+          placeholder="e.g. Manually copying Jira tickets into weekly Excel reports"
+          maxlength="200"
+        />
+      </div>
+      <div class="field-group shrink">
+        <label for="inp-hours">Hours / Week</label>
+        <input
+          type="number"
+          id="inp-hours"
+          placeholder="e.g. 3"
+          min="0.1"
+          max="168"
+          step="0.5"
+        />
+      </div>
+      <button class="btn-submit" onclick="submitTask()">+ Add Task</button>
+    </div>
+    <div class="form-error" id="form-error">Please provide a task description and a valid number of hours.</div>
+  </div>
+
+  <!-- =====================================================
+       STATS BAR  (rendered dynamically)
+       ===================================================== -->
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <!-- =====================================================
+       TASK LIST
+       ===================================================== -->
+  <div class="list-header">
+    <span class="list-title">Automation Targets</span>
+    <span class="sort-hint">Ranked by net score · Impact = Score × Hours/Week</span>
+  </div>
+
+  <div id="task-list"></div>
+
+  <!-- Impact colour legend -->
+  <div class="legend" id="legend" style="display:none;">
+    <span><span class="dot dot-low"></span> Impact &lt; 8 — Low</span>
+    <span><span class="dot dot-mid"></span> 8 – 20 — Medium</span>
+    <span><span class="dot dot-high"></span> &gt; 20 — High</span>
+  </div>
+
+
+  <!-- =====================================================
+       JAVASCRIPT
+       ===================================================== -->
+  <script>
+    // ─────────────────────────────────────────────────────
+    // STORAGE KEY
+    // All ideas are stored under this key in localStorage so
+    // the board survives page / iframe refreshes.
+    // ─────────────────────────────────────────────────────
+    const STORAGE_KEY = 'ai_automation_board_v2';
+
+    // ─────────────────────────────────────────────────────
+    // DATA HELPERS
+    // ─────────────────────────────────────────────────────
+
+    function loadTasks() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks(tasks) {
+      // Persist the full task array to localStorage on every mutation.
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function netScore(t)    { return (t.up || 0) - (t.down || 0); }
+    function impact(t)      { return netScore(t) * (t.hours || 0); }
+
+    function impactClass(score) {
+      if (score > 20)  return 'high';
+      if (score >= 8)  return 'mid';
+      if (score <= 0)  return 'neutral';
+      return '';
+    }
+
+    function sortedTasks(tasks) {
+      return [...tasks].sort((a, b) => {
+        const sd = netScore(b) - netScore(a);
+        return sd !== 0 ? sd : impact(b) - impact(a);
+      });
+    }
+
+    // Simple HTML-escape to prevent XSS when rendering user text.
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ─────────────────────────────────────────────────────
+    // SUBMIT
+    // ─────────────────────────────────────────────────────
+    function submitTask() {
+      const descEl  = document.getElementById('inp-desc');
+      const hrsEl   = document.getElementById('inp-hours');
+      const errEl   = document.getElementById('form-error');
+
+      const desc  = descEl.value.trim();
+      const hours = parseFloat(hrsEl.value);
+
+      if (!desc || !hrsEl.value.trim() || isNaN(hours) || hours <= 0) {
+        errEl.style.display = 'block';
+        (desc ? hrsEl : descEl).focus();
+        return;
+      }
+
+      errEl.style.display = 'none';
+
+      const tasks = loadTasks();
+      tasks.push({ id: uid(), desc, hours, up: 0, down: 0, voted: null });
+      saveTasks(tasks);
+
+      descEl.value = '';
+      hrsEl.value  = '';
+      descEl.focus();
+
+      render();
+    }
+
+    // Enter key works from either field
+    ['inp-desc', 'inp-hours'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') submitTask();
+      });
+    });
+
+    // ─────────────────────────────────────────────────────
+    // VOTE
+    // Supports toggling (click same arrow again to undo)
+    // and switching (click opposite arrow to reverse).
+    // ─────────────────────────────────────────────────────
+    function vote(id, dir) {
+      const tasks = loadTasks();
+      const task  = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      if (task.voted === dir) {
+        // Undo existing vote
+        if (dir === 'up')   task.up   = Math.max(0, (task.up   || 0) - 1);
+        else                task.down = Math.max(0, (task.down || 0) - 1);
+        task.voted = null;
+      } else {
+        // Remove any prior vote first
+        if (task.voted === 'up')   task.up   = Math.max(0, (task.up   || 0) - 1);
+        if (task.voted === 'down') task.down = Math.max(0, (task.down || 0) - 1);
+        // Apply new vote
+        if (dir === 'up')   task.up   = (task.up   || 0) + 1;
+        else                task.down = (task.down || 0) + 1;
+        task.voted = dir;
+      }
+
+      saveTasks(tasks);
+      render();
+    }
+
+    // ─────────────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────────────
+    function deleteTask(id) {
+      saveTasks(loadTasks().filter(t => t.id !== id));
+      render();
+    }
+
+    // ─────────────────────────────────────────────────────
+    // EXPORT — downloads a CSV of all tasks, sorted by rank
+    // ─────────────────────────────────────────────────────
+    function exportCSV() {
+      const tasks = sortedTasks(loadTasks());
+      if (!tasks.length) { alert('No tasks to export yet.'); return; }
+
+      const header = 'Rank,Task Description,Hours/Week,Net Score,Impact Score,Upvotes,Downvotes';
+      const rows   = tasks.map((t, i) =>
+        [
+          i + 1,
+          '"' + t.desc.replace(/"/g, '""') + '"',
+          t.hours,
+          netScore(t),
+          impact(t).toFixed(1),
+          t.up   || 0,
+          t.down || 0,
+        ].join(',')
+      );
+
+      const csv  = [header, ...rows].join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), {
+        href:     url,
+        download: 'automation_ideas_' + new Date().toISOString().slice(0, 10) + '.csv',
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ─────────────────────────────────────────────────────
+    // RENDER — rebuilds stats and task list from localStorage
+    // ─────────────────────────────────────────────────────
+    function renderStats(tasks) {
+      const bar = document.getElementById('stats-bar');
+      if (!tasks.length) { bar.innerHTML = ''; return; }
+
+      const totalHrs  = tasks.reduce((s, t) => s + (t.hours || 0), 0);
+      const top       = sortedTasks(tasks)[0];
+      const topImpact = top ? impact(top) : 0;
+
+      bar.innerHTML =
+        `<div class="stat-chip">Ideas: <strong>${tasks.length}</strong></div>` +
+        `<div class="stat-chip">Total hours/week at risk: <strong>${totalHrs % 1 === 0 ? totalHrs : totalHrs.toFixed(1)}h</strong></div>` +
+        (top
+          ? `<div class="stat-chip">Top target: <strong>${esc(top.desc.length > 45 ? top.desc.slice(0, 42) + '…' : top.desc)}</strong> — impact <strong>${topImpact.toFixed(1)}</strong></div>`
+          : '');
+    }
+
+    function render() {
+      const raw    = loadTasks();
+      const tasks  = sortedTasks(raw);
+      const listEl = document.getElementById('task-list');
+      const legend = document.getElementById('legend');
+
+      renderStats(raw);
+
+      if (!tasks.length) {
+        legend.style.display = 'none';
+        listEl.innerHTML =
+          `<div class="empty">
+            <div class="empty-icon">🗂️</div>
+            <div class="empty-head">No automation ideas yet</div>
+            <div>Submit the first repetitive task above — the team can then vote on what to automate!</div>
+          </div>`;
+        return;
+      }
+
+      legend.style.display = 'flex';
+
+      listEl.innerHTML = tasks.map((task, idx) => {
+        const score    = netScore(task);
+        const imp      = impact(task);
+        const scoreCs  = score > 0 ? 'pos' : score < 0 ? 'neg' : '';
+        const impCs    = impactClass(imp);
+        const rankCs   = idx === 0 ? 'gold' : '';
+
+        return `
+          <div class="task-card">
+            <!-- Vote column -->
+            <div class="vote-col">
+              <button
+                class="vote-btn${task.voted === 'up' ? ' active-up' : ''}"
+                onclick="vote('${task.id}','up')"
+                title="Upvote — I face this too"
+              >▲</button>
+              <span class="vote-score ${scoreCs}">${score}</span>
+              <button
+                class="vote-btn${task.voted === 'down' ? ' active-down' : ''}"
+                onclick="vote('${task.id}','down')"
+                title="Downvote — low priority"
+              >▼</button>
+            </div>
+
+            <!-- Task body -->
+            <div class="task-body">
+              <span class="rank-num ${rankCs}">#${idx + 1}</span>
+              <span class="task-desc">${esc(task.desc)}</span>
+
+              <!-- Metrics -->
+              <div class="metrics">
+                <div class="badge badge-hrs" title="Estimated hours spent per week">
+                  <span class="val">${task.hours % 1 === 0 ? task.hours : Number(task.hours).toFixed(1)}h</span>
+                  <span class="lbl">/ week</span>
+                </div>
+                <div class="badge badge-imp ${impCs}" title="Impact Score = Net Votes × Hours/Week">
+                  <span class="val">${imp % 1 === 0 ? imp : imp.toFixed(1)}</span>
+                  <span class="lbl">impact</span>
+                </div>
+              </div>
+
+              <button class="btn-del" onclick="deleteTask('${task.id}')" title="Remove this idea">✕</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ─────────────────────────────────────────────────────
+    // BOOT — initial render from persisted localStorage data
+    // ─────────────────────────────────────────────────────
+    render();
+  </script>
+
+</body>
+</html>
