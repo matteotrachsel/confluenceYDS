@@ -243,6 +243,52 @@
     }
     .btn-del:hover { color: #de350b; background: #ffebe6; }
 
+    /* Delete confirmation inline form */
+    .del-confirm { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .del-confirm-label { font-size: 10px; color: #de350b; white-space: nowrap; }
+    .del-confirm-input {
+      width: 68px;
+      border: 1.5px solid #de350b;
+      border-radius: 3px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-family: inherit;
+      outline: none;
+      text-transform: uppercase;
+      color: #172b4d;
+      transition: box-shadow .15s;
+    }
+    .del-confirm-input:focus { box-shadow: 0 0 0 2px rgba(222,53,11,.15); }
+    .del-confirm-input.wrong { animation: shake .3s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-5px); }
+      60%      { transform: translateX(5px); }
+    }
+    .btn-del-go {
+      padding: 3px 9px;
+      background: #de350b;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .12s;
+    }
+    .btn-del-go:hover { background: #bf2600; }
+    .btn-del-cancel {
+      background: none;
+      border: none;
+      font-size: 11px;
+      font-family: inherit;
+      color: #97a0af;
+      cursor: pointer;
+      padding: 3px 4px;
+    }
+    .btn-del-cancel:hover { color: #172b4d; }
+
     /* Initials avatar */
     .avatar {
       width: 22px;
@@ -484,8 +530,8 @@
 
     // ── In-memory render cache ──────────────────────────────
     let _tasks = [], _estimates = [];
-    // Track which estimate forms are open so re-renders keep them visible
-    const openEstForms = new Set();
+    const openEstForms     = new Set(); // estimate forms open
+    const openDelConfirms  = new Set(); // delete confirmation forms open
 
     // ── REST helper ─────────────────────────────────────────
     async function sbFetch(path, opts = {}) {
@@ -667,12 +713,41 @@
       }
     }
 
-    // ── Delete ───────────────────────────────────────────────
-    async function handleDelete(id) {
+    // ── Delete (guarded by initials confirmation) ────────────
+    function openDeleteConfirm(taskId) {
+      openDelConfirms.add(taskId);
+      render(_tasks, _estimates);
+      document.getElementById(`del-inp-${taskId}`)?.focus();
+    }
+
+    function cancelDeleteConfirm(taskId) {
+      openDelConfirms.delete(taskId);
+      render(_tasks, _estimates);
+    }
+
+    async function confirmDelete(taskId) {
+      const task = _tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // If the task has initials, require the user to type them correctly
+      if (task.submitted_by) {
+        const inp   = document.getElementById(`del-inp-${taskId}`);
+        const typed = (inp?.value || '').trim().toUpperCase();
+        if (typed !== task.submitted_by.toUpperCase()) {
+          // Shake animation for wrong input
+          inp?.classList.remove('wrong');
+          void inp?.offsetWidth; // force reflow to restart animation
+          inp?.classList.add('wrong');
+          inp?.select();
+          return;
+        }
+      }
+
       try {
-        await deleteTask(id);
-        clearMyVote(id);
-        openEstForms.delete(id);
+        await deleteTask(taskId);
+        clearMyVote(taskId);
+        openEstForms.delete(taskId);
+        openDelConfirms.delete(taskId);
         await loadAndRender();
       } catch (e) {
         setStatus('Delete failed — ' + e.message, 'error');
@@ -794,6 +869,7 @@
         const imp     = impactScore(task, avgHrs);
         const myEst   = estimates.find(e => e.task_id === task.id && e.browser_id === bid);
         const estOpen = openEstForms.has(task.id);
+        const delOpen = openDelConfirms.has(task.id);
 
         // Hours badge: show avg if estimates exist, otherwise the submitter's value
         const hrsLabel = ed
@@ -835,7 +911,20 @@
                     <span class="lbl">impact</span>
                   </div>
                 </div>
-                <button class="btn-del" onclick="handleDelete('${task.id}')" title="Remove">✕</button>
+                ${delOpen
+                  ? `<div class="del-confirm">
+                       ${task.submitted_by
+                         ? `<span class="del-confirm-label">Type&nbsp;<strong>${esc(task.submitted_by)}</strong>:</span>
+                            <input class="del-confirm-input" id="del-inp-${task.id}" type="text"
+                              placeholder="${esc(task.submitted_by)}" maxlength="5"
+                              onkeydown="if(event.key==='Enter')confirmDelete('${task.id}');if(event.key==='Escape')cancelDeleteConfirm('${task.id}');" />`
+                         : `<span class="del-confirm-label">Delete this task?</span>`
+                       }
+                       <button class="btn-del-go"     onclick="confirmDelete('${task.id}')">Delete</button>
+                       <button class="btn-del-cancel" onclick="cancelDeleteConfirm('${task.id}')">✕</button>
+                     </div>`
+                  : `<button class="btn-del" onclick="openDeleteConfirm('${task.id}')" title="Remove task">✕</button>`
+                }
               </div>
 
               <!-- Details row (only if details exist) -->
