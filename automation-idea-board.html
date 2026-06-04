@@ -306,7 +306,7 @@
     }
     .avatar.empty { background: #dfe1e6; color: #97a0af; }
 
-    /* Details row */
+    /* Details / outcome rows */
     .task-details {
       padding: 0 10px 7px 34px; /* align under description */
       font-size: 11.5px;
@@ -314,6 +314,28 @@
       line-height: 1.5;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+    .task-outcome {
+      padding: 0 10px 7px 34px;
+      font-size: 11.5px;
+      color: #42526e;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .task-outcome .outcome-tag {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: #006644;
+      background: #e3fcef;
+      border: 1px solid #abf5d1;
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin-right: 5px;
+      vertical-align: 1px;
     }
 
     /* Estimate row */
@@ -457,7 +479,13 @@
       <div class="field-group grow">
         <label for="inp-details">Additional Details <span style="font-weight:400;color:#97a0af;">(optional)</span></label>
         <textarea id="inp-details"
-          placeholder="Steps involved, systems used, who is affected, any context that helps the team understand the pain…"
+          placeholder="Steps involved, systems used, who is affected, how often — e.g. &quot;Every Friday I open ~40 Jira tickets one by one and paste their key, status and assignee into a shared Excel sheet. Takes the whole afternoon and is error-prone.&quot;"
+          maxlength="1000"></textarea>
+      </div>
+      <div class="field-group grow" style="margin-top:8px;">
+        <label for="inp-outcome">Expected Outcome <span style="font-weight:400;color:#97a0af;">(optional)</span></label>
+        <textarea id="inp-outcome"
+          placeholder="What does &quot;done&quot; look like once automated? — e.g. &quot;A scheduled job pulls all Jira tickets each Friday and fills the weekly Excel report automatically, so no manual copying is needed and the report is ready by 9am.&quot;"
           maxlength="1000"></textarea>
       </div>
     </div>
@@ -553,14 +581,15 @@
       return sbFetch('task_hours_estimates?select=task_id,hours,browser_id');
     }
 
-    async function insertTask(description, hours, details, submittedBy) {
+    async function insertTask(description, hours, details, submittedBy, expectedOutcome) {
       const rows = await sbFetch('automation_tasks', {
         method: 'POST',
         body: JSON.stringify({
           description,
           hours,
-          details:      details      || null,
-          submitted_by: submittedBy  || null
+          details:          details         || null,
+          submitted_by:     submittedBy      || null,
+          expected_outcome: expectedOutcome  || null
         })
       });
       return rows[0];
@@ -653,14 +682,16 @@
       const descEl     = document.getElementById('inp-desc');
       const hrsEl      = document.getElementById('inp-hours');
       const detailsEl  = document.getElementById('inp-details');
+      const outcomeEl  = document.getElementById('inp-outcome');
       const initialsEl = document.getElementById('inp-initials');
       const errEl      = document.getElementById('form-error');
       const btnEl      = document.getElementById('btn-add');
 
-      const description = descEl.value.trim();
-      const hours       = parseFloat(hrsEl.value);
-      const details     = detailsEl.value.trim();
-      const submittedBy = initialsEl.value.trim().toUpperCase().slice(0, 5);
+      const description     = descEl.value.trim();
+      const hours           = parseFloat(hrsEl.value);
+      const details         = detailsEl.value.trim();
+      const expectedOutcome = outcomeEl.value.trim();
+      const submittedBy     = initialsEl.value.trim().toUpperCase().slice(0, 5);
 
       if (!description || !hrsEl.value.trim() || isNaN(hours) || hours <= 0) {
         errEl.style.display = 'block';
@@ -672,7 +703,7 @@
       setStatus('Saving…', 'loading');
 
       try {
-        const task = await insertTask(description, hours, details, submittedBy);
+        const task = await insertTask(description, hours, details, submittedBy, expectedOutcome);
         // Register submitter's hours as the first crowd-sourced estimate
         await upsertEstimate(task.id, hours);
         // Remember initials for next submission
@@ -681,6 +712,7 @@
         descEl.value    = '';
         hrsEl.value     = '';
         detailsEl.value = '';
+        outcomeEl.value = '';
         clearStatus();
         await loadAndRender();
       } catch (e) {
@@ -789,7 +821,7 @@
         const rows = sorted(tasks, estimates);
         if (!rows.length) { alert('No tasks to export yet.'); return; }
 
-        const header = 'Rank,Submitted By,Task Description,Details,Avg Hours/Week,Estimate Count,Net Score,Impact Score,Upvotes,Downvotes';
+        const header = 'Rank,Submitted By,Task Description,Details,Expected Outcome,Avg Hours/Week,Estimate Count,Net Score,Impact Score,Upvotes,Downvotes';
         const lines  = rows.map((t, i) => {
           const ed  = avgHoursData(t.id, estimates);
           const avg = ed ? ed.avg : Number(t.hours);
@@ -798,6 +830,7 @@
             '"' + (t.submitted_by || '').replace(/"/g, '""') + '"',
             '"' + t.description.replace(/"/g, '""') + '"',
             '"' + (t.details || '').replace(/"/g, '""') + '"',
+            '"' + (t.expected_outcome || '').replace(/"/g, '""') + '"',
             fmt(avg),
             ed ? ed.count : 1,
             netScore(t),
@@ -929,6 +962,9 @@
 
               <!-- Details row (only if details exist) -->
               ${task.details ? `<div class="task-details">${esc(task.details)}</div>` : ''}
+
+              <!-- Expected outcome row (only if provided) -->
+              ${task.expected_outcome ? `<div class="task-outcome"><span class="outcome-tag">🎯 Outcome</span>${esc(task.expected_outcome)}</div>` : ''}
 
               <!-- Estimate row -->
               <div class="task-est-row">
