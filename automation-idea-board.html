@@ -456,7 +456,7 @@
       <div class="field-group grow">
         <label for="inp-desc">Task Description</label>
         <input type="text" id="inp-desc"
-          placeholder="e.g. Manually copying Jira tickets into weekly Excel reports"
+          placeholder="e.g. Manually reviewing created documents (Quotes, Dev Specs, etc.) for errors and inconsistencies"
           maxlength="200" />
       </div>
       <div class="field-group">
@@ -479,13 +479,13 @@
       <div class="field-group grow">
         <label for="inp-details">Additional Details <span style="font-weight:400;color:#97a0af;">(optional)</span></label>
         <textarea id="inp-details"
-          placeholder="Steps involved, systems used, who is affected, how often — e.g. &quot;Every Friday I open ~40 Jira tickets one by one and paste their key, status and assignee into a shared Excel sheet. Takes the whole afternoon and is error-prone.&quot;"
+          placeholder="Steps involved, systems used, who is affected, how often — e.g. &quot;Each PM manually reviews documents such as Quotes or Dev Specs before sign-off. The process is inconsistent across the team — different reviewers catch different issues — and takes significant time per document. Errors still slip through and quality varies widely between PMs.&quot;"
           maxlength="1000"></textarea>
       </div>
       <div class="field-group grow" style="margin-top:8px;">
         <label for="inp-outcome">Expected Outcome <span style="font-weight:400;color:#97a0af;">(optional)</span></label>
         <textarea id="inp-outcome"
-          placeholder="What does &quot;done&quot; look like once automated? — e.g. &quot;A scheduled job pulls all Jira tickets each Friday and fills the weekly Excel report automatically, so no manual copying is needed and the report is ready by 9am.&quot;"
+          placeholder="What does success look like once automated? — e.g. &quot;An LLM automatically scans submitted documents for inconsistencies, missing fields, and formatting errors, then returns structured feedback. Review quality becomes standardised across all PMs, resulting in higher document quality with near-zero recurring errors.&quot;"
           maxlength="1000"></textarea>
       </div>
     </div>
