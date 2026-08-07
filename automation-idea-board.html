@@ -537,10 +537,15 @@
       throw new Error('Blocked: board is not embedded in an iframe.');
     }
 
-    // ── Supabase config ─────────────────────────────────────
-    const SUPA_URL  = 'https://otltsqgdbyaiswkrosan.supabase.co';
-    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bHRzcWdkYnlhaXN3a3Jvc2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTk4MzYsImV4cCI6MjA5NjA3NTgzNn0.JTRnGbjIEvvC7DCTBXyld8qqUF5wJO8nCz36njBU0Fc';
-    const BASE_HDR  = { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+    // ── Firebase / Firestore config ─────────────────────────
+    // Data is stored in Cloud Firestore via its REST API (no SDK,
+    // so the page stays a single self-contained file). The API key
+    // is public by design — access is governed by Firestore rules.
+    const FB_PROJECT = 'innovationideas-6f5f1';
+    const FB_KEY     = 'AIzaSyDl2dmX38quKPqbMZuakKy8IIe3_vLa8Ek';
+    const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
+    const COL_TASKS  = 'tasks';
+    const COL_EST    = 'estimates';
 
     // ── Browser identity ────────────────────────────────────
     // A stable random ID stored in localStorage identifies this
@@ -571,7 +576,7 @@
 
     // ── Per-browser vote state (localStorage) ───────────────
     // Only the direction (up/down/null) lives locally; the actual
-    // counts are in Supabase so everyone sees the same totals.
+    // counts are in Firestore so everyone sees the same totals.
     const VOTE_KEY = 'aib_votes_v1';
     function loadVotes()      { try { return JSON.parse(localStorage.getItem(VOTE_KEY) || '{}'); } catch { return {}; } }
     function saveVotes(v)     { localStorage.setItem(VOTE_KEY, JSON.stringify(v)); }
@@ -584,62 +589,108 @@
     const openEstForms     = new Set(); // estimate forms open
     const openDelConfirms  = new Set(); // delete confirmation forms open
 
-    // ── REST helper ─────────────────────────────────────────
-    async function sbFetch(path, opts = {}) {
-      const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    // ── Firestore REST helper ───────────────────────────────
+    async function fbFetch(path, opts = {}) {
+      const sep = path.includes('?') ? '&' : '?';
+      const res = await fetch(`${FB_BASE}${path}${sep}key=${FB_KEY}`, {
         ...opts,
-        headers: { ...BASE_HDR, ...(opts.headers || {}) }
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
       });
       if (!res.ok) throw new Error((await res.text()) || res.statusText);
       const txt = await res.text();
       return txt ? JSON.parse(txt) : null;
     }
 
-    // ── API calls ────────────────────────────────────────────
-    function fetchTasks() {
-      return sbFetch('automation_tasks?select=*&order=created_at.asc');
+    // ── Firestore typed-value encode / decode ───────────────
+    // Firestore wraps every field in a type tag, e.g. {stringValue:"x"}
+    // or {integerValue:"5"}. These helpers convert to/from plain JS.
+    const fbStr = s => (s === null || s === undefined || s === '') ? { nullValue: null } : { stringValue: String(s) };
+    const fbInt = n => ({ integerValue: String(Math.trunc(Number(n) || 0)) });
+    const fbDbl = n => ({ doubleValue: Number(n) || 0 });
+
+    function fbDecode(v) {
+      if (!v) return null;
+      if ('stringValue'   in v) return v.stringValue;
+      if ('integerValue'  in v) return Number(v.integerValue);
+      if ('doubleValue'   in v) return v.doubleValue;
+      if ('booleanValue'  in v) return v.booleanValue;
+      if ('nullValue'     in v) return null;
+      if ('timestampValue'in v) return v.timestampValue;
+      return null;
     }
 
-    function fetchEstimates() {
-      return sbFetch('task_hours_estimates?select=task_id,hours,browser_id');
+    // Convert a Firestore document into a flat object; `id` is the doc ID
+    function fbParseDoc(d) {
+      const obj = { id: d.name.split('/').pop() };
+      const f = d.fields || {};
+      for (const k in f) obj[k] = fbDecode(f[k]);
+      return obj;
     }
+
+    // List every document in a collection, following pagination
+    async function fbList(collection) {
+      const out = [];
+      let token = '';
+      do {
+        const q = `/${collection}?pageSize=300` + (token ? `&pageToken=${encodeURIComponent(token)}` : '');
+        const data = await fbFetch(q);
+        (data?.documents || []).forEach(d => out.push(fbParseDoc(d)));
+        token = data?.nextPageToken || '';
+      } while (token);
+      return out;
+    }
+
+    // ── API calls ────────────────────────────────────────────
+    function fetchTasks()     { return fbList(COL_TASKS); }
+    function fetchEstimates() { return fbList(COL_EST); }
 
     async function insertTask(description, hours, details, submittedBy, expectedOutcome) {
-      const rows = await sbFetch('automation_tasks', {
-        method: 'POST',
-        body: JSON.stringify({
-          description,
-          hours,
-          details:          details         || null,
-          submitted_by:     submittedBy      || null,
-          expected_outcome: expectedOutcome  || null
-        })
-      });
-      return rows[0];
+      const body = { fields: {
+        description:      fbStr(description),
+        hours:           fbDbl(hours),
+        upvotes:         fbInt(0),
+        downvotes:       fbInt(0),
+        details:         fbStr(details),
+        submitted_by:    fbStr(submittedBy),
+        expected_outcome:fbStr(expectedOutcome),
+        created_at:      fbInt(Date.now())
+      }};
+      const doc = await fbFetch(`/${COL_TASKS}`, { method: 'POST', body: JSON.stringify(body) });
+      return fbParseDoc(doc);
     }
 
-    // Upsert: insert or update the calling browser's estimate for a task.
-    // The UNIQUE(task_id, browser_id) constraint plus merge-duplicates
-    // ensures each browser submits exactly one estimate per task.
+    // Upsert the calling browser's estimate for a task. A deterministic
+    // document ID (taskId__browserId) gives us one estimate per browser
+    // per task — PATCH creates it if missing, replaces it if present.
     function upsertEstimate(taskId, hours) {
-      return sbFetch('task_hours_estimates', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
-        body: JSON.stringify({ task_id: taskId, hours, browser_id: getBrowserId() })
-      });
+      const docId = `${taskId}__${getBrowserId()}`;
+      const body  = { fields: {
+        task_id:    fbStr(taskId),
+        hours:      fbDbl(hours),
+        browser_id: fbStr(getBrowserId()),
+        created_at: fbInt(Date.now())
+      }};
+      return fbFetch(`/${COL_EST}/${docId}`, { method: 'PATCH', body: JSON.stringify(body) });
     }
 
     async function patchVoteCount(id, col, delta) {
-      const rows = await sbFetch(`automation_tasks?id=eq.${id}&select=${col}`);
-      const next  = Math.max(0, ((rows?.[0]?.[col]) ?? 0) + delta);
-      return sbFetch(`automation_tasks?id=eq.${id}`, {
+      // Read just the counter field, then write it back with a field mask
+      const doc  = await fbFetch(`/${COL_TASKS}/${id}?mask.fieldPaths=${col}`);
+      const cur  = fbDecode(doc.fields?.[col]) ?? 0;
+      const next = Math.max(0, cur + delta);
+      return fbFetch(`/${COL_TASKS}/${id}?updateMask.fieldPaths=${col}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [col]: next })
+        body: JSON.stringify({ fields: { [col]: fbInt(next) } })
       });
     }
 
-    function deleteTask(id) {
-      return sbFetch(`automation_tasks?id=eq.${id}`, { method: 'DELETE' });
+    async function deleteTask(id) {
+      // Firestore has no cascade — remove the task, then its estimates
+      await fbFetch(`/${COL_TASKS}/${id}`, { method: 'DELETE' });
+      const orphans = _estimates.filter(e => e.task_id === id);
+      await Promise.all(orphans.map(e =>
+        fbFetch(`/${COL_EST}/${e.id}`, { method: 'DELETE' }).catch(() => {})
+      ));
     }
 
     // ── Computed helpers ─────────────────────────────────────
