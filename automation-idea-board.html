@@ -673,14 +673,20 @@
       return fbFetch(`/${COL_EST}/${docId}`, { method: 'PATCH', body: JSON.stringify(body) });
     }
 
-    async function patchVoteCount(id, col, delta) {
-      // Read just the counter field, then write it back with a field mask
-      const doc  = await fbFetch(`/${COL_TASKS}/${id}?mask.fieldPaths=${col}`);
-      const cur  = fbDecode(doc.fields?.[col]) ?? 0;
-      const next = Math.max(0, cur + delta);
-      return fbFetch(`/${COL_TASKS}/${id}?updateMask.fieldPaths=${col}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ fields: { [col]: fbInt(next) } })
+    // Apply one or more vote-counter deltas to a task in a single ATOMIC
+    // commit. Firestore's `increment` field transform is server-side atomic,
+    // so simultaneous voters can't overwrite each other's counts (no lost
+    // updates) — and it needs no pre-read, which also saves read quota.
+    // deltas example: { upvotes: 1 } or { upvotes: -1, downvotes: 1 }.
+    function applyVoteDeltas(id, deltas) {
+      const docPath = `projects/${FB_PROJECT}/databases/(default)/documents/${COL_TASKS}/${id}`;
+      const fieldTransforms = Object.entries(deltas).map(([fieldPath, d]) => ({
+        fieldPath,
+        increment: { integerValue: String(d) }
+      }));
+      return fbFetch(':commit', {
+        method: 'POST',
+        body: JSON.stringify({ writes: [ { transform: { document: docPath, fieldTransforms } } ] })
       });
     }
 
@@ -801,16 +807,21 @@
       const current = myVote(id);
       document.querySelectorAll(`[data-id="${id}"] .vote-btn`).forEach(b => b.disabled = true);
 
+      // Build the net counter change, then send it as one atomic commit.
+      const deltas = {};
+      const col = dir === 'up' ? 'upvotes' : 'downvotes';
+      if (current === dir) {
+        deltas[col] = -1;                 // undo existing vote
+        clearMyVote(id);
+      } else {
+        if (current === 'up')   deltas.upvotes   = (deltas.upvotes   || 0) - 1;
+        if (current === 'down') deltas.downvotes = (deltas.downvotes || 0) - 1;
+        deltas[col] = (deltas[col] || 0) + 1;
+        setMyVote(id, dir);
+      }
+
       try {
-        if (current === dir) {
-          await patchVoteCount(id, dir === 'up' ? 'upvotes' : 'downvotes', -1);
-          clearMyVote(id);
-        } else {
-          if (current === 'up')   await patchVoteCount(id, 'upvotes',   -1);
-          if (current === 'down') await patchVoteCount(id, 'downvotes', -1);
-          await patchVoteCount(id, dir === 'up' ? 'upvotes' : 'downvotes', 1);
-          setMyVote(id, dir);
-        }
+        await applyVoteDeltas(id, deltas);
         await loadAndRender();
       } catch (e) {
         setStatus('Vote failed — ' + e.message, 'error');
@@ -1102,8 +1113,23 @@
     setStatus('Loading shared board…', 'loading');
     loadAndRender();
 
-    // Auto-refresh every 30 s so new ideas and votes appear for everyone
-    setInterval(loadAndRender, 30_000);
+    // ── Auto-refresh (quota-aware) ───────────────────────────
+    // Every fetch reads the whole collection, and Firestore's free
+    // tier caps daily reads. To stay well under that with the whole
+    // team using the board, the scheduled refresh:
+    //   • skips while the tab is hidden (background tabs cost 0 reads)
+    //   • skips while an inline form is open, so a periodic redraw
+    //     never wipes what someone is mid-typing
+    // A fresh load runs immediately whenever the tab regains focus.
+    function scheduledRefresh() {
+      if (document.hidden) return;
+      if (openEstForms.size || openDelConfirms.size) return;
+      loadAndRender();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) scheduledRefresh();
+    });
+    setInterval(scheduledRefresh, 90_000);
   </script>
 
 </body>
